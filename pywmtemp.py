@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Simple dockapp
+Simple dockapp to show up temperature for selected labels
 """
 import argparse
 import os
@@ -8,6 +8,7 @@ import re
 import sys
 import time
 
+import psutil
 import wmdocklib
 from wmdocklib import helpers
 from wmdocklib import pywmgeneral
@@ -19,68 +20,68 @@ XDG_CONF_DIR = os.getenv('XDG_CONFIG_HOME', os.path.expanduser('~/.config'))
 # program
 FONT = '''\
 /* XPM */
-static char *_x8_lcd[] = {
+static char *_x8_lcd_alt[] = {
 /* columns rows colors chars-per-pixel */
 "192 48 10 1 ",
 "  c #202020",
 ". c #440000",
 "X c #542A00",
 "o c #004941",
-"O c #007D71",
-"+ c #920000",
-"@ c #E00000",
-"# c #A85500",
-"$ c #FF8200",
-"% c #20B6AE",
+"O c #920000",
+"+ c #E00000",
+"@ c #A85500",
+"# c #FF8200",
+"$ c #188A86",
+"% c #20B2AE",
 /* pixels */
-" ooo   oOo   %o%   %o%   o%o  OoooO  %%o   oo%   oo%   %oo   ooo   ooo   ooo   ooo   ooo   oooO  %%%   oooO O%%%O O%%%O %ooo% O%%%O O%%%O O%%%O O%%%O O%%%O  ooo   ooo   oo%O  ooo  O%oo  O%%%O ",
-"o   o o % o o% %o oO Oo oOOO% %   % %  Oo o  Oo o O o o O o %   % o O o o   o o   o o   o o   % %   % o   % o   % o   % %   % %   o %   o o   % %   % %   % o   o o   o o O o o   o o O o %   % ",
-"o   o o % o oO Oo %OOO% %   o o  Oo oOO o o O o oO  o o  Oo oO Oo o O o o   o o   o o   o o  Oo %   % o   % o   % o   % %   % %   o %   o o   % %   % %   % o O o o O o oO  o %OOO% o  Oo o   % ",
-" ooo   oOo   ooo   %o%   %%%   o%o   %oo   ooo   %oo   oo%  O%%%O O%%%O  ooo  O%%%O  ooo   o%o  OoooO  oooO O%%%O  %%%O O%%%O %%%%O O%%%O  oooO O%%%O O%%%O  ooo   ooo  Oooo   ooo   oooO  oo%O ",
-"o   o o % o o   o %OOO% o   % oO  o % O % o   o oO  o o  Oo oO Oo o O o o   o o   o o   o oO  o %   % o   % %   o o   % o   % o   % %   % o   % %   % o   % o   o o   o oO  o %OOO% o  Oo o O o ",
-"o   o o   o o   o oO Oo %OOOo %   % %  Oo o   o o O o o O o %   % o O o o O o o   o o OOo %   o %   % o   % %   o o   % o   % o   % %   % o   % %   % o   % o O o o O o o O o o   o o O o o   o ",
-" ooo   o%o   ooo   %o%   o%o  OoooO  %%oO  ooo   oo%   %oo   ooo   ooo   o%o   ooo   o%%  Oooo   %%%   oooO O%%%O O%%%O  oooO O%%%O O%%%O  ooo% O%%%O O%%%O  ooo   o%o   oo%O  ooo  O%oo   o%o  ",
+" ooo   o$o   %o%   %o%   o%o  $ooo$  %%o   oo%   oo%   %oo   ooo   ooo   ooo   ooo   ooo   ooo$  %%%   ooo$ $%%%$ $%%%$ %ooo% $%%%$ $%%%$ $%%%$ $%%%$ $%%%$  ooo   ooo   oo%$  ooo  $%oo  $%%%$ ",
+"o   o o % o o% %o o$ $o o$$$% %   % %  $o o  $o o $ o o $ o %   % o $ o o   o o   o o   o o   % %   % o   % o   % o   % %   % %   o %   o o   % %   % %   % o   o o   o o $ o o   o o $ o %   % ",
+"o   o o % o o$ $o %$$$% %   o o  $o o$$ o o $ o o$  o o  $o o$ $o o $ o o   o o   o o   o o  $o %   % o   % o   % o   % %   % %   o %   o o   % %   % %   % o $ o o $ o o$  o %$$$% o  $o o   % ",
+" ooo   o$o   ooo   %o%   %%%   o%o   %oo   ooo   %oo   oo%  $%%%$ $%%%$  ooo  $%%%$  ooo   o%o  $ooo$  ooo$ $%%%$  %%%$ $%%%$ %%%%$ $%%%$  ooo$ $%%%$ $%%%$  ooo   ooo  $ooo   ooo   ooo$  oo%$ ",
+"o   o o % o o   o %$$$% o   % o$  o % $ % o   o o$  o o  $o o$ $o o $ o o   o o   o o   o o$  o %   % o   % %   o o   % o   % o   % %   % o   % %   % o   % o   o o   o o$  o %$$$% o  $o o $ o ",
+"o   o o   o o   o o$ $o %$$$o %   % %  $o o   o o $ o o $ o %   % o $ o o $ o o   o o $$o %   o %   % o   % %   o o   % o   % o   % %   % o   % %   % o   % o $ o o $ o o $ o o   o o $ o o   o ",
+" ooo   o%o   ooo   %o%   o%o  $ooo$  %%o$  ooo   oo%   %oo   ooo   ooo   o%o   ooo   o%%  $ooo   %%%   ooo$ $%%%$ $%%%$  ooo$ $%%%$ $%%%$  ooo% $%%%$ $%%%$  ooo   o%o   oo%$  ooo  $%oo   o%o  ",
+"                                                                         $                                                                                         $                            ",
+" %%%   %%%  $%%%   %%%  $%%%  $%%%$ $%%%$  %%%$ $ooo$  o$o  $%%%$ $ooo$ $ooo   %$%  $%%%   %%%  $%%%   %%%  $%%%   %%%  $%$%$ $ooo$ $ooo$ $ooo$ $ooo$ $ooo$ $%%%$ $%%o   o%o   o%%$  o%o   ooo  ",
+"%   % %   % %   % %   o %   % %   o %   o %   o %   % o % o o   % %   % %   o % % % %   % %   % %   % %   % %   % %   $ o % o %   % %   % %   % %   % %   % o   % %   o o% %o o   % o$ $o o   o ",
+"% $$% %   % %   % %   o %   % %   o %   o %   o %   % o % o o   % %   % %   o % % % %   % %   % %   % %   % %   % %   o o % o %   % %   % %   % $% %$ %$ $% o  %$ %   o o % o o   % %   % o   o ",
+"$o%o$ $%%%$ $%%%  $ooo  $ooo$ $%%%$ $%%%  $oo%% $%%%$  o$o   ooo$ $%%%  $ooo  $o$o$ $ooo$ $ooo$ $%%%  $ooo$ $%%%   %%%   o$o  $ooo$ $ooo$ $o$o$ o%%%o o%o%o  o%o  $ooo   ooo   ooo$  ooo   ooo  ",
+"% $$% %   % %   % %   o %   % %   o %   o %   % %   % o % o o   % %   % %   o % % % %   % %   % %   o % % % %   % o   % o % o %   % %   % % % % $% %$ o % o $%  o %   o o   o o   % o   o o   o ",
+"%     %   % %   % %   o %   % %   o %   o %   % %   % o % o %   % %   % %   o % % % %   % %   % %   o %  %% %   % $   % o % o %   % $% %$ % % % %   % o % o %   o %   o o   o o   % o   o o   o ",
+" %%%  $ooo$ $%%%   %%%  $%%%  $%%%$ $ooo   %%%  $ooo$  o$o   %%%  $ooo$ $%%%$ $o o$ $ooo$  %%%  $ooo   %%%$ $ooo$  %%%   o%o   %%%   $%$  $%$%$ $ooo$  o$o  $%%%$ $%%o   ooo   o%%$  ooo   ooo  ",
+"                                                                                                                                                                                                ",
+" XXX   X@X   #X#   #X#   X#X  @XXX@  ##X   XX#   XX#   #XX   XXX   XXX   XXX   XXX   XXX   XXX@  ###   XXX@ @###@ @###@ #XXX# @###@ @###@ @###@ @###@ @###@  XXX   XXX   XX#@  XXX  @#XX  @###@ ",
+"X   X X # X X# #X X@ @X X@@@# #   # #  @X X  @X X @ X X @ X #   # X @ X X   X X   X X   X X   # #   # X   # X   # X   # #   # #   X #   X X   # #   # #   # X   X X   X X @ X X   X X @ X #   # ",
+"X   X X # X X@ @X #@@@# #   X X  @X X@@ X X @ X X@  X X  @X X@ @X X @ X X   X X   X X   X X  @X #   # X   # X   # X   # #   # #   X #   X X   # #   # #   # X @ X X @ X X@  X #@@@# X  @X X   # ",
+" XXX   X@X   XXX   #X#   ###   X#X   #XX   XXX   #XX   XX#  @###@ @###@  XXX  @###@  XXX   X#X  @XXX@  XXX@ @###@  ###@ @###@ ####@ @###@  XXX@ @###@ @###@  XXX   XXX  @XXX   XXX   XXX@  XX#@ ",
+"X   X X # X X   X #@@@# X   # X@  X # @ # X   X X@  X X  @X X@ @X X @ X X   X X   X X   X X@  X #   # X   # #   X X   # X   # X   # #   # X   # #   # X   # X   X X   X X@  X #@@@# X  @X X @ X ",
+"X   X X   X X   X X@ @X #@@@X #   # #  @X X   X X @ X X @ X #   # X @ X X @ X X   X X @@X #   X #   # X   # #   X X   # X   # X   # #   # X   # #   # X   # X @ X X @ X X @ X X   X X @ X X   X ",
+" XXX   X#X   XXX   #X#   X#X  @XXX@  ##X@  XXX   XX#   #XX   XXX   XXX   X#X   XXX   X##  @XXX   ###   XXX@ @###@ @###@  XXX@ @###@ @###@  XXX# @###@ @###@  XXX   X#X   XX#@  XXX  @#XX   X#X  ",
+"                                                                         @                                                                                         @                            ",
+" ###   ###  @###   ###  @###  @###@ @###@  ###@ @XXX@  X@X  @###@ @XXX@ @XXX   #@#  @###   ###  @###   ###  @###   ###  @#@#@ @XXX@ @XXX@ @XXX@ @XXX@ @XXX@ @###@ @##X   X#X   X##@  X#X   XXX  ",
+"#   # #   # #   # #   X #   # #   X #   X #   X #   # X # X X   # #   # #   X # # # #   # #   # #   # #   # #   # #   @ X # X #   # #   # #   # #   # #   # X   # #   X X# #X X   # X@ @X X   X ",
+"# @@# #   # #   # #   X #   # #   X #   X #   X #   # X # X X   # #   # #   X # # # #   # #   # #   # #   # #   # #   X X # X #   # #   # #   # @# #@ #@ @# X  #@ #   X X # X X   # #   # X   X ",
+"@X#X@ @###@ @###  @XXX  @XXX@ @###@ @###  @XX## @###@  X@X   XXX@ @###  @XXX  @X@X@ @XXX@ @XXX@ @###  @XXX@ @###   ###   X@X  @XXX@ @XXX@ @X@X@ X###X X#X#X  X#X  @XXX   XXX   XXX@  XXX   XXX  ",
+"# @@# #   # #   # #   X #   # #   X #   X #   # #   # X # X X   # #   # #   X # # # #   # #   # #   X # # # #   # X   # X # X #   # #   # # # # @# #@ X # X @#  X #   X X   X X   # X   X X   X ",
+"#     #   # #   # #   X #   # #   X #   X #   # #   # X # X #   # #   # #   X # # # #   # #   # #   X #  ## #   # @   # X # X #   # @# #@ # # # #   # X # X #   X #   X X   X X   # X   X X   X ",
+" ###  @XXX@ @###   ###  @###  @###@ @XXX   ###  @XXX@  X@X   ###  @XXX@ @###@ @X X@ @XXX@  ###  @XXX   ###@ @XXX@  ###   X#X   ###   @#@  @#@#@ @XXX@  X@X  @###@ @##X   XXX   X##@  XXX   XXX  ",
+"                                                                                                                                                                                                ",
+" ...   .O.   +.+   +.+   .+.  O...O  ++.   ..+   ..+   +..   ...   ...   ...   ...   ...   ...O  +++   ...O O+++O O+++O +...+ O+++O O+++O O+++O O+++O O+++O  ...   ...   ..+O  ...  O+..  O+++O ",
+".   . . + . .+ +. .O O. .OOO+ +   + +  O. .  O. . O . . O . +   + . O . .   . .   . .   . .   + +   + .   + .   + .   + +   + +   . +   . .   + +   + +   + .   . .   . . O . .   . . O . +   + ",
+".   . . + . .O O. +OOO+ +   . .  O. .OO . . O . .O  . .  O. .O O. . O . .   . .   . .   . .  O. +   + .   + .   + .   + +   + +   . +   . .   + +   + +   + . O . . O . .O  . +OOO+ .  O. .   + ",
+" ...   .O.   ...   +.+   +++   .+.   +..   ...   +..   ..+  O+++O O+++O  ...  O+++O  ...   .+.  O...O  ...O O+++O  +++O O+++O ++++O O+++O  ...O O+++O O+++O  ...   ...  O...   ...   ...O  ..+O ",
+".   . . + . .   . +OOO+ .   + .O  . + O + .   . .O  . .  O. .O O. . O . .   . .   . .   . .O  . +   + .   + +   . .   + .   + .   + +   + .   + +   + .   + .   . .   . .O  . +OOO+ .  O. . O . ",
+".   . .   . .   . .O O. +OOO. +   + +  O. .   . . O . . O . +   + . O . . O . .   . . OO. +   . +   + .   + +   . .   + .   + .   + +   + .   + +   + .   + . O . . O . . O . .   . . O . .   . ",
+" ...   .+.   ...   +.+   .+.  O...O  ++.O  ...   ..+   +..   ...   ...   .+.   ...   .++  O...   +++   ...O O+++O O+++O  ...O O+++O O+++O  ...+ O+++O O+++O  ...   .+.   ..+O  ...  O+..   .+.  ",
 "                                                                         O                                                                                         O                            ",
-" %%%   %%%  O%%%   %%%  O%%%  O%%%O O%%%O  %%%O OoooO  oOo  O%%%O OoooO Oooo   %O%  O%%%   %%%  O%%%   %%%  O%%%   %%%  O%O%O OoooO OoooO OoooO OoooO OoooO O%%%O O%%o   o%o   o%%O  o%o   ooo  ",
-"%   % %   % %   % %   o %   % %   o %   o %   o %   % o % o o   % %   % %   o % % % %   % %   % %   % %   % %   % %   O o % o %   % %   % %   % %   % %   % o   % %   o o% %o o   % oO Oo o   o ",
-"% OO% %   % %   % %   o %   % %   o %   o %   o %   % o % o o   % %   % %   o % % % %   % %   % %   % %   % %   % %   o o % o %   % %   % %   % O% %O %O O% o  %O %   o o % o o   % %   % o   o ",
-"Oo%oO O%%%O O%%%  Oooo  OoooO O%%%O O%%%  Ooo%% O%%%O  oOo   oooO O%%%  Oooo  OoOoO OoooO OoooO O%%%  OoooO O%%%   %%%   oOo  OoooO OoooO OoOoO o%%%o o%o%o  o%o  Oooo   ooo   oooO  ooo   ooo  ",
-"% OO% %   % %   % %   o %   % %   o %   o %   % %   % o % o o   % %   % %   o % % % %   % %   % %   o % % % %   % o   % o % o %   % %   % % % % O% %O o % o O%  o %   o o   o o   % o   o o   o ",
-"%     %   % %   % %   o %   % %   o %   o %   % %   % o % o %   % %   % %   o % % % %   % %   % %   o %  %% %   % O   % o % o %   % O% %O % % % %   % o % o %   o %   o o   o o   % o   o o   o ",
-" %%%  OoooO O%%%   %%%  O%%%  O%%%O Oooo   %%%  OoooO  oOo   %%%  OoooO O%%%O Oo oO OoooO  %%%  Oooo   %%%O OoooO  %%%   o%o   %%%   O%O  O%O%O OoooO  oOo  O%%%O O%%o   ooo   o%%O  ooo   ooo  ",
-"                                                                                                                                                                                                ",
-" XXX   X#X   $X$   $X$   X$X  #XXX#  $$X   XX$   XX$   $XX   XXX   XXX   XXX   XXX   XXX   XXX#  $$$   XXX# #$$$# #$$$# $XXX$ #$$$# #$$$# #$$$# #$$$# #$$$#  XXX   XXX   XX$#  XXX  #$XX  #$$$# ",
-"X   X X $ X X$ $X X# #X X###$ $   $ $  #X X  #X X # X X # X $   $ X # X X   X X   X X   X X   $ $   $ X   $ X   $ X   $ $   $ $   X $   X X   $ $   $ $   $ X   X X   X X # X X   X X # X $   $ ",
-"X   X X $ X X# #X $###$ $   X X  #X X## X X # X X#  X X  #X X# #X X # X X   X X   X X   X X  #X $   $ X   $ X   $ X   $ $   $ $   X $   X X   $ $   $ $   $ X # X X # X X#  X $###$ X  #X X   $ ",
-" XXX   X#X   XXX   $X$   $$$   X$X   $XX   XXX   $XX   XX$  #$$$# #$$$#  XXX  #$$$#  XXX   X$X  #XXX#  XXX# #$$$#  $$$# #$$$# $$$$# #$$$#  XXX# #$$$# #$$$#  XXX   XXX  #XXX   XXX   XXX#  XX$# ",
-"X   X X $ X X   X $###$ X   $ X#  X $ # $ X   X X#  X X  #X X# #X X # X X   X X   X X   X X#  X $   $ X   $ $   X X   $ X   $ X   $ $   $ X   $ $   $ X   $ X   X X   X X#  X $###$ X  #X X # X ",
-"X   X X   X X   X X# #X $###X $   $ $  #X X   X X # X X # X $   $ X # X X # X X   X X ##X $   X $   $ X   $ $   X X   $ X   $ X   $ $   $ X   $ $   $ X   $ X # X X # X X # X X   X X # X X   X ",
-" XXX   X$X   XXX   $X$   X$X  #XXX#  $$X#  XXX   XX$   $XX   XXX   XXX   X$X   XXX   X$$  #XXX   $$$   XXX# #$$$# #$$$#  XXX# #$$$# #$$$#  XXX$ #$$$# #$$$#  XXX   X$X   XX$#  XXX  #$XX   X$X  ",
-"                                                                         #                                                                                         #                            ",
-" $$$   $$$  #$$$   $$$  #$$$  #$$$# #$$$#  $$$# #XXX#  X#X  #$$$# #XXX# #XXX   $#$  #$$$   $$$  #$$$   $$$  #$$$   $$$  #$#$# #XXX# #XXX# #XXX# #XXX# #XXX# #$$$# #$$X   X$X   X$$#  X$X   XXX  ",
-"$   $ $   $ $   $ $   X $   $ $   X $   X $   X $   $ X $ X X   $ $   $ $   X $ $ $ $   $ $   $ $   $ $   $ $   $ $   # X $ X $   $ $   $ $   $ $   $ $   $ X   $ $   X X$ $X X   $ X# #X X   X ",
-"$ ##$ $   $ $   $ $   X $   $ $   X $   X $   X $   $ X $ X X   $ $   $ $   X $ $ $ $   $ $   $ $   $ $   $ $   $ $   X X $ X $   $ $   $ $   $ #$ $# $# #$ X  $# $   X X $ X X   $ $   $ X   X ",
-"#X$X# #$$$# #$$$  #XXX  #XXX# #$$$# #$$$  #XX$$ #$$$#  X#X   XXX# #$$$  #XXX  #X#X# #XXX# #XXX# #$$$  #XXX# #$$$   $$$   X#X  #XXX# #XXX# #X#X# X$$$X X$X$X  X$X  #XXX   XXX   XXX#  XXX   XXX  ",
-"$ ##$ $   $ $   $ $   X $   $ $   X $   X $   $ $   $ X $ X X   $ $   $ $   X $ $ $ $   $ $   $ $   X $ $ $ $   $ X   $ X $ X $   $ $   $ $ $ $ #$ $# X $ X #$  X $   X X   X X   $ X   X X   X ",
-"$     $   $ $   $ $   X $   $ $   X $   X $   $ $   $ X $ X $   $ $   $ $   X $ $ $ $   $ $   $ $   X $  $$ $   $ #   $ X $ X $   $ #$ $# $ $ $ $   $ X $ X $   X $   X X   X X   $ X   X X   X ",
-" $$$  #XXX# #$$$   $$$  #$$$  #$$$# #XXX   $$$  #XXX#  X#X   $$$  #XXX# #$$$# #X X# #XXX#  $$$  #XXX   $$$# #XXX#  $$$   X$X   $$$   #$#  #$#$# #XXX#  X#X  #$$$# #$$X   XXX   X$$#  XXX   XXX  ",
-"                                                                                                                                                                                                ",
-" ...   .+.   @.@   @.@   .@.  +...+  @@.   ..@   ..@   @..   ...   ...   ...   ...   ...   ...+  @@@   ...+ +@@@+ +@@@+ @...@ +@@@+ +@@@+ +@@@+ +@@@+ +@@@+  ...   ...   ..@+  ...  +@..  +@@@+ ",
-".   . . @ . .@ @. .+ +. .+++@ @   @ @  +. .  +. . + . . + . @   @ . + . .   . .   . .   . .   @ @   @ .   @ .   @ .   @ @   @ @   . @   . .   @ @   @ @   @ .   . .   . . + . .   . . + . @   @ ",
-".   . . @ . .+ +. @+++@ @   . .  +. .++ . . + . .+  . .  +. .+ +. . + . .   . .   . .   . .  +. @   @ .   @ .   @ .   @ @   @ @   . @   . .   @ @   @ @   @ . + . . + . .+  . @+++@ .  +. .   @ ",
-" ...   .+.   ...   @.@   @@@   .@.   @..   ...   @..   ..@  +@@@+ +@@@+  ...  +@@@+  ...   .@.  +...+  ...+ +@@@+  @@@+ +@@@+ @@@@+ +@@@+  ...+ +@@@+ +@@@+  ...   ...  +...   ...   ...+  ..@+ ",
-".   . . @ . .   . @+++@ .   @ .+  . @ + @ .   . .+  . .  +. .+ +. . + . .   . .   . .   . .+  . @   @ .   @ @   . .   @ .   @ .   @ @   @ .   @ @   @ .   @ .   . .   . .+  . @+++@ .  +. . + . ",
-".   . .   . .   . .+ +. @+++. @   @ @  +. .   . . + . . + . @   @ . + . . + . .   . . ++. @   . @   @ .   @ @   . .   @ .   @ .   @ @   @ .   @ @   @ .   @ . + . . + . . + . .   . . + . .   . ",
-" ...   .@.   ...   @.@   .@.  +...+  @@.+  ...   ..@   @..   ...   ...   .@.   ...   .@@  +...   @@@   ...+ +@@@+ +@@@+  ...+ +@@@+ +@@@+  ...@ +@@@+ +@@@+  ...   .@.   ..@+  ...  +@..   .@.  ",
-"                                                                         +                                                                                         +                            ",
-" @@@   @@@  +@@@   @@@  +@@@  +@@@+ +@@@+  @@@+ +...+  .+.  +@@@+ +...+ +...   @+@  +@@@   @@@  +@@@   @@@  +@@@   @@@  +@+@+ +...+ +...+ +...+ +...+ +...+ +@@@+ +@@.   .@.   .@@+  .@.   ...  ",
-"@   @ @   @ @   @ @   . @   @ @   . @   . @   . @   @ . @ . .   @ @   @ @   . @ @ @ @   @ @   @ @   @ @   @ @   @ @   + . @ . @   @ @   @ @   @ @   @ @   @ .   @ @   . .@ @. .   @ .+ +. .   . ",
-"@ ++@ @   @ @   @ @   . @   @ @   . @   . @   . @   @ . @ . .   @ @   @ @   . @ @ @ @   @ @   @ @   @ @   @ @   @ @   . . @ . @   @ @   @ @   @ +@ @+ @+ +@ .  @+ @   . . @ . .   @ @   @ .   . ",
-"+.@.+ +@@@+ +@@@  +...  +...+ +@@@+ +@@@  +..@@ +@@@+  .+.   ...+ +@@@  +...  +.+.+ +...+ +...+ +@@@  +...+ +@@@   @@@   .+.  +...+ +...+ +.+.+ .@@@. .@.@.  .@.  +...   ...   ...+  ...   ...  ",
-"@ ++@ @   @ @   @ @   . @   @ @   . @   . @   @ @   @ . @ . .   @ @   @ @   . @ @ @ @   @ @   @ @   . @ @ @ @   @ .   @ . @ . @   @ @   @ @ @ @ +@ @+ . @ . +@  . @   . .   . .   @ .   . .   . ",
-"@     @   @ @   @ @   . @   @ @   . @   . @   @ @   @ . @ . @   @ @   @ @   . @ @ @ @   @ @   @ @   . @  @@ @   @ +   @ . @ . @   @ +@ @+ @ @ @ @   @ . @ . @   . @   . .   . .   @ .   . .   . ",
-" @@@  +...+ +@@@   @@@  +@@@  +@@@+ +...   @@@  +...+  .+.   @@@  +...+ +@@@+ +. .+ +...+  @@@  +...   @@@+ +...+  @@@   .@.   @@@   +@+  +@+@+ +...+  .+.  +@@@+ +@@.   ...   .@@+  ...   ...  ",
-"                                                                                                                                                                                          +++++ "
+" +++   +++  O+++   +++  O+++  O+++O O+++O  +++O O...O  .O.  O+++O O...O O...   +O+  O+++   +++  O+++   +++  O+++   +++  O+O+O O...O O...O O...O O...O O...O O+++O O++.   .+.   .++O  .+.   ...  ",
+"+   + +   + +   + +   . +   + +   . +   . +   . +   + . + . .   + +   + +   . + + + +   + +   + +   + +   + +   + +   O . + . +   + +   + +   + +   + +   + .   + +   . .+ +. .   + .O O. .   . ",
+"+ OO+ +   + +   + +   . +   + +   . +   . +   . +   + . + . .   + +   + +   . + + + +   + +   + +   + +   + +   + +   . . + . +   + +   + +   + O+ +O +O O+ .  +O +   . . + . .   + +   + .   . ",
+"O.+.O O+++O O+++  O...  O...O O+++O O+++  O..++ O+++O  .O.   ...O O+++  O...  O.O.O O...O O...O O+++  O...O O+++   +++   .O.  O...O O...O O.O.O .+++. .+.+.  .+.  O...   ...   ...O  ...   ...  ",
+"+ OO+ +   + +   + +   . +   + +   . +   . +   + +   + . + . .   + +   + +   . + + + +   + +   + +   . + + + +   + .   + . + . +   + +   + + + + O+ +O . + . O+  . +   . .   . .   + .   . .   . ",
+"+     +   + +   + +   . +   + +   . +   . +   + +   + . + . +   + +   + +   . + + + +   + +   + +   . +  ++ +   + O   + . + . +   + O+ +O + + + +   + . + . +   . +   . .   . .   + .   . .   . ",
+" +++  O...O O+++   +++  O+++  O+++O O...   +++  O...O  .O.   +++  O...O O+++O O. .O O...O  +++  O...   +++O O...O  +++   .+.   +++   O+O  O+O+O O...O  .O.  O+++O O++.   ...   .++O  ...   ...  ",
+"                                                                                                                                                                                          OOOOO "
 };
 '''
 
@@ -107,26 +108,16 @@ class SensorDockApp(wmdocklib.DockApp):
         self._find_sys_files()
 
     def _read_config(self):
-        conf = os.path.join(XDG_CONF_DIR, 'pywmtemp.yaml')
+        conf = os.path.join(XDG_CONF_DIR, 'pywmtemp.yaml2')
         if self.args.config:
             conf = self.args.config
 
-        with open(conf) as fobj:
-            self.conf = yaml.safe_load(fobj)
-
-    def _find_sys_files(self):
-        for root, dirs, files in os.walk('/sys/devices'):
-            for fname in files:
-                match = re.match(r'^temp(?P<n>\d)_label', fname)
-                if not match:
-                    continue
-                with open(os.path.join(root, fname)) as fobj:
-                    sys_label = fobj.read().strip()
-                    for item in self.conf['readings']:
-                        if item.get('find_sys_label') == sys_label:
-                            item['fname'] = os.path.join(root,
-                                                         f'temp{match["n"]}_'
-                                                         f'input')
+        try:
+            with open(conf) as fobj:
+                self.conf = yaml.safe_load(fobj)
+        except OSError:
+            # TODO: add some logging?
+            pass
 
     def run(self):
         self.prepare_pixmaps()
