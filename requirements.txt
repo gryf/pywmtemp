@@ -1,0 +1,3 @@
+pbr
+pyyaml>=6.0
+psutil>=5.7.3
