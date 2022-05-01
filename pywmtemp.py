@@ -107,18 +107,6 @@ class SensorDockApp(wmdocklib.DockApp):
         self._read_config()
         self._find_sys_files()
 
-    def _read_config(self):
-        conf = os.path.join(XDG_CONF_DIR, 'pywmtemp.yaml2')
-        if self.args.config:
-            conf = self.args.config
-
-        try:
-            with open(conf) as fobj:
-                self.conf = yaml.safe_load(fobj)
-        except OSError:
-            # TODO: add some logging?
-            pass
-
     def run(self):
         self.prepare_pixmaps()
         self.max_chars_in_line = int((self.width - 2 * self.x_offset) /
@@ -126,18 +114,6 @@ class SensorDockApp(wmdocklib.DockApp):
         self.max_rows = int((self.height - 2 * self.x_offset) /
                             self.char_height)
         self.open_xwindow()
-
-        if len(self.conf['readings']) > self.max_rows:
-            print("Too many lines to fit into dockapp.")
-            return
-
-        append = True
-        while self.max_rows - len(self.conf['readings']) > 0:
-            if append:
-                self.conf['readings'].append({'empty': 'empty'})
-            else:
-                self.conf['readings'].insert(0, {'empty': 'empty'})
-            append = not append
 
         try:
             self.main_loop()
@@ -202,6 +178,22 @@ class SensorDockApp(wmdocklib.DockApp):
             string = ''.join([chr(ord(i) + displacement) for i in string])
 
         return string, displacement
+
+    def _read_config(self):
+        conf = os.path.join(XDG_CONF_DIR, 'pywmtemp.yaml')
+        if self.args.config:
+            conf = self.args.config
+
+        try:
+            with open(conf) as fobj:
+                self.conf = yaml.safe_load(fobj)
+        except OSError:
+            # TODO: add some logging?
+            pass
+
+        for item in self.conf['readings'][:2]:
+            self._history[item.get('name')] = [0 for _ in
+                                               range(self.graph_width)]
 
 
 def main():
