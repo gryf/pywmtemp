@@ -170,9 +170,12 @@ class SensorDockApp(wmdocklib.DockApp):
     readings using information found on /sys file system.
     """
     background_color = '#202020'
-    x_offset = 4
+    x_offset = 3
     y_offset = 3
     font_dimentions = (6, 8)
+    graph_width = 58
+    graph_max_height = 36
+    graph_coords = (3, 25)
 
     def __init__(self, args=None):
         super().__init__(args)
@@ -182,9 +185,9 @@ class SensorDockApp(wmdocklib.DockApp):
         self.conf = {}
         self.critical = 0
         self.warning = 0
-
+        self._history = {}
         self._read_config()
-        self._find_sys_files()
+        self._current_graph = list(self._history.keys())[0]
 
     def run(self):
         self.prepare_pixmaps()
@@ -212,6 +215,7 @@ class SensorDockApp(wmdocklib.DockApp):
                 for item in self.conf.get('readings', [])[:2]:
                     self._put_string(item, position)
                     position += self.char_height
+                self._draw_graph()
 
             count += 1
             if count >= 10:
@@ -274,6 +278,18 @@ class SensorDockApp(wmdocklib.DockApp):
         for item in self.conf['readings'][:2]:
             self._history[item.get('name')] = [0 for _ in
                                                range(self.graph_width)]
+
+    def _draw_graph(self):
+        for count, item in enumerate(self._history[self._current_graph]):
+            height = int((item/100) * self.graph_max_height)
+            helpers.copy_xpm_area(65, self.graph_coords[1],
+                                  1, self.graph_max_height,
+                                  self.graph_coords[0] + count,
+                                  self.graph_coords[1])
+            helpers.copy_xpm_area(64, self.graph_coords[1],
+                                  1, self.graph_max_height - height,
+                                  self.graph_coords[0] + count,
+                                  self.graph_coords[1])
 
     def _put_string(self, item, position):
         temp, displacement = self.get_reading(item)
