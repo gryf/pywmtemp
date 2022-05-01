@@ -187,7 +187,9 @@ class SensorDockApp(wmdocklib.DockApp):
         self.warning = 0
         self._history = {}
         self._read_config()
-        self._current_graph = list(self._history.keys())[0]
+        self._current_graph = ''
+        if list(self._history.keys()):
+            self._current_graph = list(self._history.keys())[0]
         helpers.add_mouse_region(0, self.graph_coords[0], self.graph_coords[1],
                                  width=self.graph_width,
                                  height=self.graph_max_height)
@@ -288,7 +290,7 @@ class SensorDockApp(wmdocklib.DockApp):
             # TODO: add some logging?
             pass
 
-        for item in self.conf['readings'][:2]:
+        for item in self.conf.get('readings', [])[:2]:
             self._history[item.get('name')] = [0 for _ in
                                                range(self.graph_width)]
 
@@ -304,6 +306,9 @@ class SensorDockApp(wmdocklib.DockApp):
             return True
 
     def _draw_graph(self):
+        if not self._current_graph:
+            return
+
         for count, item in enumerate(self._history[self._current_graph]):
             height = int((item/100) * self.graph_max_height)
             helpers.copy_xpm_area(65, self.graph_coords[1],
