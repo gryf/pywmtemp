@@ -146,21 +146,21 @@ class SensorDockApp(wmdocklib.DockApp):
 
     def main_loop(self):
 
+        count = 0
         while True:
             self.check_for_events()
+
             position = 1
-            for item in self.conf['readings']:
-                self.add_string(self.get_reading(item), 1, position)
-                position += self.char_height
-            while position < self.max_rows * self.char_height:
-                self.add_string(' ' * self.max_chars_in_line, 1, position)
-                position += self.char_height
-            pywmgeneral.put_pixel(32, 32, int('ffff88', 16))
-            pywmgeneral.put_pixel(33, 33, int('ffff88', 16))
-            pywmgeneral.put_pixel(32, 33, int('ffff88', 16))
-            pywmgeneral.put_pixel(33, 32, int('ffff88', 16))
+            if count == 0:
+                for item in self.conf['readings']:
+                    self.add_string(self.get_reading(item), 1, position)
+                    position += self.char_height
+
+            count += 1
+            if count >= 10:
+                count = 0
             self.redraw()
-            time.sleep(0.5)
+            time.sleep(0.1)
 
     def get_reading(self, item):
         if 'fname' not in item:
