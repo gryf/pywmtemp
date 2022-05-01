@@ -207,9 +207,10 @@ class SensorDockApp(wmdocklib.DockApp):
 
             position = 1
             if count == 0:
-                for item in self.conf['readings']:
-                    string, offset = self.get_reading(item)
-                    self.add_string(string, 1, position)
+                # suport up to two reading. all surplus entries will be
+                # ignored.
+                for item in self.conf.get('readings', [])[:2]:
+                    self._put_string(item, position)
                     position += self.char_height
 
             count += 1
@@ -273,6 +274,17 @@ class SensorDockApp(wmdocklib.DockApp):
         for item in self.conf['readings'][:2]:
             self._history[item.get('name')] = [0 for _ in
                                                range(self.graph_width)]
+
+    def _put_string(self, item, position):
+        temp, displacement = self.get_reading(item)
+        name = item.get('name', '').upper()
+        name = name[:4]
+        if displacement:
+            name = ''.join([chr(ord(i) + displacement)
+                            for i in name])
+
+        self.add_string(name, 1, position)
+        self.add_string(temp, 34, position)
 
 
 def main():
