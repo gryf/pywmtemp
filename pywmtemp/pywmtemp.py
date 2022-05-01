@@ -20,7 +20,7 @@ XDG_CONF_DIR = os.getenv('XDG_CONFIG_HOME', os.path.expanduser('~/.config'))
 # program
 BACKGROUND = '''\
 /* XPM */
-static char *mask3[] = {
+static char *ui[] = {
 /* columns rows colors chars-per-pixel */
 "66 64 6 1 ",
 "  c None",
@@ -98,7 +98,7 @@ static char *mask3[] = {
 '''
 FONT = '''\
 /* XPM */
-static char *_x8_lcd_alt[] = {
+static char *_x8_lcd[] = {
 /* columns rows colors chars-per-pixel */
 "192 48 10 1 ",
 "  c #202020",
