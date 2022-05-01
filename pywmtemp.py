@@ -216,6 +216,9 @@ class SensorDockApp(wmdocklib.DockApp):
                     self._put_string(item, position)
                     position += self.char_height
                 self._draw_graph()
+                name = self._current_graph.upper()
+                name = name[:4]
+                self.add_string(name, 1, 50)
 
             count += 1
             if count >= 10:
