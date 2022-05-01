@@ -188,6 +188,9 @@ class SensorDockApp(wmdocklib.DockApp):
         self._history = {}
         self._read_config()
         self._current_graph = list(self._history.keys())[0]
+        helpers.add_mouse_region(0, self.graph_coords[0], self.graph_coords[1],
+                                 width=self.graph_width,
+                                 height=self.graph_max_height)
 
     def run(self):
         self.prepare_pixmaps()
@@ -206,7 +209,8 @@ class SensorDockApp(wmdocklib.DockApp):
 
         count = 0
         while True:
-            self.check_for_events()
+            if self._on_event(self.check_for_events()):
+                count = 0
 
             position = 1
             if count == 0:
@@ -266,6 +270,12 @@ class SensorDockApp(wmdocklib.DockApp):
 
         return string, displacement
 
+    def _switch_graph(self):
+        for key in self._history:
+            if key != self._current_graph:
+                self._current_graph = key
+                break
+
     def _read_config(self):
         conf = os.path.join(XDG_CONF_DIR, 'pywmtemp.yaml')
         if self.args.config:
@@ -281,6 +291,17 @@ class SensorDockApp(wmdocklib.DockApp):
         for item in self.conf['readings'][:2]:
             self._history[item.get('name')] = [0 for _ in
                                                range(self.graph_width)]
+
+    def _on_event(self, event):
+        if not event:
+            return
+
+        if event.get('type') == 'buttonrelease' and event.get('button') == 1:
+            x = event.get('x', 0)
+            y = event.get('y', 0)
+            if helpers.check_mouse_region(x, y) > -1:
+                self._switch_graph()
+            return True
 
     def _draw_graph(self):
         for count, item in enumerate(self._history[self._current_graph]):
