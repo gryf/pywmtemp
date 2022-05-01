@@ -153,7 +153,8 @@ class SensorDockApp(wmdocklib.DockApp):
             position = 1
             if count == 0:
                 for item in self.conf['readings']:
-                    self.add_string(self.get_reading(item), 1, position)
+                    string, offset = self.get_reading(item)
+                    self.add_string(string, 1, position)
                     position += self.char_height
 
             count += 1
@@ -163,20 +164,21 @@ class SensorDockApp(wmdocklib.DockApp):
             time.sleep(0.1)
 
     def get_reading(self, item):
-        if 'fname' not in item:
-            return ' ' * self.max_chars_in_line
 
-        with open(item['fname']) as fobj:
-            value = fobj.read().strip()
+        if not self.conf:
+            return ' ', 0
 
-        if item.get('divide'):
-            value = int(int(value)/int(item['divide']))
-        label = item['label']
-        if len(f"{label}{value}{item['unit']}") > self.max_chars_in_line:
-            return 'ERRTOOLNG'
+        temp = None
+        temps = psutil.sensors_temperatures()
+        for shw in temps.get(item.get('sensor'), []):
+            if shw.label == item.get('label'):
+                temp = shw
+                break
 
-        while len(f"{label}{value}{item['unit']}") != self.max_chars_in_line:
-            label += ' '
+        value = int(temp.current)
+        name = item.get('name')
+        self._history[name] = self._history[name][1:]
+        self._history[name].append(value)
 
         # shift charset depending on the threshold defined in config, assuming
         # charset is the same row(s) copied with different color for warning
@@ -184,18 +186,22 @@ class SensorDockApp(wmdocklib.DockApp):
         # FIXME: remove hardcoded multiplies in favor of automatically
         # computed factors.
         displacement = 0
-        if item.get('override_warning'):
-            if value >= item['override_warning']:
-                displacement = int(self.charset_width / self.char_width) * 2
-        if item.get('override_critical'):
-            if value >= item['override_critical']:
-                displacement = int(self.charset_width / self.char_width) * 4
+        if item.get('override_warning') and value >= item['override_warning']:
+            displacement = int(self.charset_width / self.char_width) * 2
+        elif temp.high and value >= temp.high:
+            displacement = int(self.charset_width / self.char_width) * 2
 
-        string = f"{label}{value}{item['unit']}".replace('°', '\\').upper()
+        if (item.get('override_critical') and
+                value >= item['override_critical']):
+            displacement = int(self.charset_width / self.char_width) * 4
+        elif temp.critical and value >= temp.critical:
+            displacement = int(self.charset_width / self.char_width) * 4
+
+        string = f"{value}{item['unit']}".replace('°', '\\').upper()
         if displacement:
             string = ''.join([chr(ord(i) + displacement) for i in string])
 
-        return string
+        return string, displacement
 
 
 def main():
