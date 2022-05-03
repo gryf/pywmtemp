@@ -170,18 +170,14 @@ class SensorDockApp(wmdocklib.DockApp):
     readings using information found on /sys file system.
     """
     background_color = '#202020'
-    x_offset = 3
-    y_offset = 3
-    font_dimentions = (6, 8)
     graph_width = 58
     graph_max_height = 36
     graph_coords = (3, 25)
 
     def __init__(self, args=None):
         super().__init__(args)
-        self.font = FONT
+        self.fonts = [wmdocklib.BitmapFonts(FONT, (6, 8))]
         self.background = BACKGROUND
-        self.max_chars_in_line = None
         self.conf = {}
         self.critical = 0
         self.warning = 0
@@ -196,12 +192,7 @@ class SensorDockApp(wmdocklib.DockApp):
 
     def run(self):
         self.prepare_pixmaps()
-        self.max_chars_in_line = int((self.width - 2 * self.x_offset) /
-                                     self.char_width)
-        self.max_rows = int((self.height - 2 * self.x_offset) /
-                            self.char_height)
         self.open_xwindow()
-
         try:
             self.main_loop()
         except KeyboardInterrupt:
@@ -220,11 +211,11 @@ class SensorDockApp(wmdocklib.DockApp):
                 # ignored.
                 for item in self.conf.get('readings', [])[:2]:
                     self._put_string(item, position)
-                    position += self.char_height
+                    position += self.fonts[0].height
                 self._draw_graph()
                 name = self._current_graph.upper()
                 name = name[:4]
-                self.add_string(name, 1, 50)
+                self.fonts[0].add_string(name, 1, 50)
 
             count += 1
             if count >= 10:
@@ -248,6 +239,8 @@ class SensorDockApp(wmdocklib.DockApp):
         name = item.get('name')
         self._history[name] = self._history[name][1:]
         self._history[name].append(value)
+        charset_width = self.fonts[0].charset_width
+        char_width = self.fonts[0].width
 
         # shift charset depending on the threshold defined in config, assuming
         # charset is the same row(s) copied with different color for warning
@@ -256,15 +249,15 @@ class SensorDockApp(wmdocklib.DockApp):
         # computed factors.
         displacement = 0
         if item.get('override_warning') and value >= item['override_warning']:
-            displacement = int(self.charset_width / self.char_width) * 2
+            displacement = int(charset_width / char_width) * 2
         elif temp.high and value >= temp.high:
-            displacement = int(self.charset_width / self.char_width) * 2
+            displacement = int(charset_width / char_width) * 2
 
         if (item.get('override_critical') and
                 value >= item['override_critical']):
-            displacement = int(self.charset_width / self.char_width) * 4
+            displacement = int(charset_width / char_width) * 4
         elif temp.critical and value >= temp.critical:
-            displacement = int(self.charset_width / self.char_width) * 4
+            displacement = int(charset_width / char_width) * 4
 
         string = f"{value}{item['unit']}".replace('°', '\\').upper()
         if displacement:
@@ -328,8 +321,8 @@ class SensorDockApp(wmdocklib.DockApp):
             name = ''.join([chr(ord(i) + displacement)
                             for i in name])
 
-        self.add_string(name, 1, position)
-        self.add_string(temp, 34, position)
+        self.fonts[0].add_string(name, 1, position)
+        self.fonts[0].add_string(temp, 34, position)
 
 
 def main():
