@@ -259,6 +259,13 @@ class SensorDockApp(wmdocklib.DockApp):
         elif temp.critical and value >= temp.critical:
             displacement = int(charset_width / char_width) * 4
 
+        if (len(str(value)) - len(item.get('unit', ''))) <= 5:
+            value = (f'{value:{5 - len(item.get("unit", ""))}}'
+                     f'{item.get("unit", "")}')
+        else:
+            value = f'{value:5}'
+
+
         string = f"{value}{item['unit']}".replace('°', '\\').upper()
         if displacement:
             string = ''.join([chr(ord(i) + displacement) for i in string])
@@ -316,13 +323,13 @@ class SensorDockApp(wmdocklib.DockApp):
     def _put_string(self, item, position):
         temp, displacement = self.get_reading(item)
         name = item.get('name', '').upper()
-        name = name[:4]
+        name = f'{name[:4]:4}'
         if displacement:
             name = ''.join([chr(ord(i) + displacement)
                             for i in name])
 
         self.fonts[0].add_string(name, 1, position)
-        self.fonts[0].add_string(temp, 34, position)
+        self.fonts[0].add_string(temp[:5], 28, position)
 
 
 def main():
