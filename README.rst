@@ -5,7 +5,7 @@ PyWMTemp
 WindowMaker dockapp for monitoring resources like CPU/GPU temperatures. It
 supports up to 2 different readings.
 
-.. image:: /images/pywmtemp.png?raw=true
+.. image:: /images/pywmtemp.gif?raw=true
    :alt: wmamixer overview
 
 
