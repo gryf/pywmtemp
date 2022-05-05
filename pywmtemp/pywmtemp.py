@@ -213,9 +213,7 @@ class SensorDockApp(wmdocklib.DockApp):
                     self._put_string(item, position)
                     position += self.fonts[0].height
                 self._draw_graph()
-                name = self._current_graph.upper()
-                name = name[:4]
-                self.fonts[0].add_string(name, 1, 50)
+                self._draw_graph_label()
 
             count += 1
             if count >= 10:
@@ -330,6 +328,18 @@ class SensorDockApp(wmdocklib.DockApp):
 
         self.fonts[0].add_string(name, 1, position)
         self.fonts[0].add_string(temp[:5], 28, position)
+
+    def _draw_graph_label(self):
+        name = self._current_graph.upper()
+        name = name[:4]
+        # ugly as hell 1 pixel border for the upper and left side of the label
+        helpers.copy_xpm_area(1, 65,
+                              len(name) * self.fonts[0].width + 1, 1,
+                              4, 51)
+        helpers.copy_xpm_area(1, 65,
+                              1, self.fonts[0].height + 1,
+                              4, 51)
+        self.fonts[0].add_string(name, 2, 49)
 
 
 def main():
