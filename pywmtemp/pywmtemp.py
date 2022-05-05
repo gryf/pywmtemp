@@ -265,8 +265,8 @@ class SensorDockApp(wmdocklib.DockApp):
         else:
             value = f'{value:5}'
 
+        string = f"{value}".replace('°', '\\').upper()
 
-        string = f"{value}{item['unit']}".replace('°', '\\').upper()
         if displacement:
             string = ''.join([chr(ord(i) + displacement) for i in string])
 
