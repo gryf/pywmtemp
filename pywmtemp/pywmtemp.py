@@ -176,6 +176,7 @@ class SensorDockApp(wmdocklib.DockApp):
 
     def __init__(self, args=None):
         super().__init__(args)
+        self._debug = args.debug
         self.fonts = [wmdocklib.BitmapFonts(FONT, (6, 8))]
         self.background = BACKGROUND
         self.conf = {}
@@ -242,7 +243,7 @@ class SensorDockApp(wmdocklib.DockApp):
 
         # shift charset depending on the threshold defined in config, assuming
         # charset is the same row(s) copied with different color for warning
-        # and critival.
+        # and critical.
         # FIXME: remove hardcoded multiplies in favor of automatically
         # computed factors.
         displacement = 0
@@ -345,6 +346,8 @@ class SensorDockApp(wmdocklib.DockApp):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', help='Alternate config file')
+    parser.add_argument('-d', '--debug', action="store_true",
+                        help='Turn on debug information')
     args = parser.parse_args()
 
     dockapp = SensorDockApp(args)
