@@ -233,6 +233,9 @@ class SensorDockApp(wmdocklib.DockApp):
             if shw.label == item.get('label'):
                 temp = shw
                 break
+        else:
+            # in case there is no items matched.
+            return ' ', 0
 
         value = int(temp.current)
         name = item.get('name')
